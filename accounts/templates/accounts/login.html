@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load form_filters %}
+{% block content %}
+<div class="container mt-5" style="max-width: 400px;">
+    <div class="card shadow">
+        <div class="card-body">
+            <h4 class="card-title mb-4 text-center">使用者登入</h4>
+
+            {% if form.errors %}
+                <div class="alert alert-danger" role="alert">
+                    帳號或密碼錯誤，請再試一次。
+                </div>
+            {% endif %}
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="id_username" class="form-label">帳號</label>
+                    {{ form.username|add_class:"form-control" }}
+                </div>
+                <div class="mb-3">
+                    <label for="id_password" class="form-label">密碼</label>
+                    {{ form.password|add_class:"form-control" }}
+                </div>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">登入</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

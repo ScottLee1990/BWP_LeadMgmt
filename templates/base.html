@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>BWP-潛在客戶開發管理</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% load static %}
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    {% block extra_head %}{% endblock %}
+</head>
+{# 【優化】為 body 加入淺色背景，提升質感 #}
+<body class="bg-light">
+
+    {# ================== Navbar ================== #}
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background: linear-gradient(to left, #3c5691, #183473);">
+      <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center fw-bold" href="{% url 'main:main' %}">
+          <img src="{% static 'images/logo.png' %}" alt="Logo" height="40" class="me-2">
+          博威精密-開發管理
+        </a>
+
+        <div class="collapse navbar-collapse">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            {# 【優化】使用 request.resolver_match.app_name 來判斷並高亮目前的導覽標籤 #}
+            <li class="nav-item">
+              <a class="nav-link fw-bold {% if request.resolver_match.app_name == 'main' %}active{% endif %}" href="{% url 'main:main' %}">進度總覽</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link fw-bold {% if request.resolver_match.app_name == 'leads' %}active{% endif %}" href="{% url 'leads:potential_customer_list' %}">潛在客戶管理</a>
+            </li>
+            {# 【新增】加入「報價管理」的導覽標籤 #}
+            <li class="nav-item">
+              <a class="nav-link fw-bold {% if request.resolver_match.app_name == 'lead_enquiries' %}active{% endif %}" href="{% url 'lead_enquiries:enquiry_list' %}">報價管理</a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+          {% if user.is_authenticated %}
+            <span class="navbar-text text-white">您好，{{ user.username }}</span>
+            <form action="{% url 'accounts:logout' %}" method="post" class="d-inline mb-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-light btn-sm">登出</button>
+            </form>
+          {% endif %}
+
+          {% if recent_activity_logs %}
+            <a data-bs-toggle="modal" data-bs-target="#activityLogModal" class="btn btn-outline-secondary btn-sm text-white" title="操作紀錄">
+                <i class="bi bi-clock-history"></i>
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+
+    {# ================== Main Content ================== #}
+    <main class="container py-4">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    {# ================== Footer ================== #}
+    <footer class="text-center mt-auto py-3 border-top bg-white">
+        <span class="text-muted">&copy; {{ current_year }} Created By Scott Lee</span>
+    </footer>
+
+    {# ================== Modals ================== #}
+    <div class="modal fade" id="modalForm" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          </div>
+      </div>
+    </div>
+
+    {% if recent_activity_logs %}
+    <div class="modal fade" id="activityLogModal" tabindex="-1" aria-labelledby="activityLogModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="activityLogModalLabel">最近的操作紀錄</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                    <ul class="list-group list-group-flush">
+                        {% for log in recent_activity_logs %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    {{ log.get_change_message }}
+                                    <small class="text-muted d-block">
+                                        由 {{ log.user.username }} 操作
+                                    </small>
+                                </div>
+                                <span class="badge bg-light text-dark">{{ log.action_time|timesince }} 以前</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item">沒有任何操作紀錄。</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ================== Scripts ================== #}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    $(document).ready(function () {
+
+      // --- Part 1: 開啟 Modal 並載入表單 (維持不變) ---
+      $(document).on('click', '.open-modal', function (e) {
+        e.preventDefault();
+        const url = $(this).data('url');
+        console.log("AJAX GET: 正在從 " + url + " 載入表單...");
+        $('#modalForm').modal('show');
+        $.get(url, function (data) {
+          $('#modalForm .modal-content').html(data.html_form);
+        }).fail(function (xhr) {
+            if (xhr.status === 403) {
+                const errorHtml = `
+                <div class="modal-header"><h5 class="modal-title text-danger">操作失敗</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body text-danger"><p>權限不足！僅資料建立者可進行此操作。</p></div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button></div>`;
+                $('#modalForm .modal-content').html(errorHtml);
+            }
+        });
+      });
+
+      // --- Part 2: 處理 Modal 內的表單提交 (核心修改處) ---
+      $(document).on('submit', '#modalForm form', function (e) {
+        e.preventDefault();
+        const form = $(this);
+        const url = form.attr('action');
+
+        // 【核心修改】檢查表單是否為檔案上傳類型
+        if (form.attr('enctype') === 'multipart/form-data') {
+            // --- 如果是檔案上傳表單，使用 FormData 和 $.ajax ---
+            console.log("AJAX POST (檔案): 正在提交表單到 " + url);
+
+            // 建立 FormData 物件，它能正確處理檔案
+            const formData = new FormData(this);
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                // 【核心修改】必須設定這兩項為 false，才能讓 jQuery 正確傳送檔案
+                processData: false,
+                contentType: false,
+                success: function(data) {
+                    if (data.success) {
+                        $('#modalForm').modal('hide');
+                        location.reload();
+                    } else {
+                        $('#modalForm .modal-content').html(data.html_form);
+                    }
+                },
+                error: function() {
+                    alert("檔案上傳失敗，請稍後再試。");
+                }
+            });
+
+        } else {
+            // --- 如果是普通表單，維持原有的 .serialize() 方法 ---
+            console.log("AJAX POST (文字): 正在提交表單到 " + url);
+
+            $.post(url, form.serialize(), function (data) {
+                if (data.success) {
+                    $('#modalForm').modal('hide');
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        location.reload();
+                    }
+                } else {
+                    $('#modalForm .modal-content').html(data.html_form);
+                }
+            });
+        }
+      });
+    });
+    </script>
+</body>
+</html>

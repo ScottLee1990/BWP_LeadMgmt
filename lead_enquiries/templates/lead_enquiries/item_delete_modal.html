@@ -1,0 +1,15 @@
+<form method="post" action="{% url 'lead_enquiries:enquiry_item_delete' pk=item.pk %}">
+    {% csrf_token %}
+    <div class="modal-header">
+        <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle-fill"></i> 確認刪除</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        <p>您確定要刪除品項 **"{{ item.item_name|default:'(未命名品項)' }}"** 嗎？</p>
+        <p class="text-danger">此操作無法復原！</p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-danger">確認刪除</button>
+    </div>
+</form>

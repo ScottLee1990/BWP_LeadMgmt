@@ -1,0 +1,17 @@
+<!-- crm_app/templates/crm_app/customer_confirm_delete.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>刪除客戶確認</title>
+</head>
+<body>
+    <h2>確定要刪除這個客戶嗎？</h2>
+    <p>公司名稱：<strong>{{ potential_customer.company_name }}</strong></p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">確定刪除</button>
+        <a href="{% url 'leads:potential_customer_detail' pk=potential_customer.pk %}">取消</a>
+    </form>
+</body>
+</html>

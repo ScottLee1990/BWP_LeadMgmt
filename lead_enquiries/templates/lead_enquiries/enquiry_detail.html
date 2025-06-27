@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+            <h2 class="mb-1">{{ enquiry.bwp_no }}</h2>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge fs-6 bg-primary">{{ enquiry.get_status_display }}</span>
+                {# 【修改】頁首總金額改為顯示 NTD #}
+                <span class="badge fs-6 bg-success">總金額 (NT): {{ enquiry.total_amount_ntd|floatformat:2 }}</span>
+                <span class="text-muted small">客戶:<a href="{% url 'leads:potential_customer_detail' pk=enquiry.potential_customer.pk %}">{{ enquiry.potential_customer.company_name }}</a> </span>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-shrink-0">
+            {# ... 操作按鈕區塊維持不變 ... #}
+            <form method="post" action="{% url 'lead_enquiries:toggle_enquiry_pin' pk=enquiry.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn {% if enquiry.is_pinned %}btn-info{% else %}btn-outline-info{% endif %}">
+                    <i class="bi {% if enquiry.is_pinned %}bi-pin-angle-fill{% else %}bi-pin-angle{% endif %}"></i>
+                    {% if enquiry.is_pinned %}取消重點{% else %}重點追蹤{% endif %}
+                </button>
+            </form>
+            {% if request.user == enquiry.created_by %}
+                <a href="{% url 'lead_enquiries:enquiry_update' pk=enquiry.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil-square"></i> 修改
+                </a>
+                <button class="btn btn-outline-danger open-modal" data-url="{% url 'lead_enquiries:enquiry_delete' pk=enquiry.pk %}">
+                    <i class="bi bi-trash"></i> 刪除
+                </button>
+            {% endif %}
+            <a href="{% url 'lead_enquiries:enquiry_list' %}" class="btn btn-light border">
+                <i class="bi bi-arrow-left"></i> 返回
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header fw-bold"><i class="bi bi-file-earmark-text"></i> 報價單資料</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <strong class="text-muted d-block">客戶報價單號</strong>
+                            {{ enquiry.enquiry_no|default:"-" }}
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong class="text-muted d-block">建立者</strong>
+                            {{ enquiry.created_by.username }}
+                        </div>
+                        <div class="col-12 text-muted small text-end border-top pt-2">
+                            建立於 {{ enquiry.created_at|date:"Y-m-d H:i" }} /
+                            最後更新於 {{ enquiry.updated_at|date:"Y-m-d H:i" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4 class="mb-0"><i class="bi bi-list-ol"></i> 報價品項</h4>
+                    <button class="btn btn-sm btn-primary open-modal" data-url="{% url 'lead_enquiries:enquiry_item_create' enquiry_pk=enquiry.pk %}">
+                        <i class="bi bi-plus"></i> 新增品項
+                    </button>
+                </div>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    {# 【修改】表格標頭新增/調整欄位 #}
+                                    <th scope="col">#</th>
+                                    <th scope="col">產品名稱</th>
+                                    <th scope="col" class="text-end">數量</th>
+                                    <th scope="col" class="text-end">單價 ({{ enquiry.get_currency_display }})</th>
+                                    <th scope="col" class="text-end">小計 ({{ enquiry.get_currency_display }})</th>
+                                    <th scope="col" class="text-end">匯率</th>
+                                    <th scope="col" class="text-end fw-bold">小計 (NT)</th>
+                                    <th scope="col" class="text-center">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in enquiry.items.all %}
+                                <tr>
+                                    <th scope="row">{{ forloop.counter }}</th>
+                                    <td>{{ item.item_name|default:"-" }}</td>
+                                    <td class="text-end">{{ item.quantity|default:0 }}</td>
+                                    <td class="text-end">{{ item.unit_price|default:0|floatformat:2 }}</td>
+                                    <td class="text-end">{{ item.subtotal|default:0|floatformat:2 }}</td>
+                                    <td class="text-end">{{ item.exchange_rate|default:1|floatformat:4 }}</td>
+                                    {# 【新增】顯示台幣小計的欄位 #}
+                                    <td class="text-end fw-bold">{{ item.subtotal_ntd|default:0|floatformat:2 }}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group">
+                                            <button class="btn btn-outline-secondary btn-sm py-0 px-1 open-modal" data-url="{% url 'lead_enquiries:enquiry_item_update' pk=item.id %}">編輯</button>
+                                            <button class="btn btn-outline-danger btn-sm py-0 px-1 open-modal" data-url="{% url 'lead_enquiries:enquiry_item_delete' pk=item.id %}">刪除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">尚無報價品項</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-light">
+                                    {# 【修改】表格頁腳總計改為顯示 NTD #}
+                                    <td colspan="6" class="text-end fw-bold">總計 (NT)</td>
+                                    <td class="text-end fw-bold fs-5">{{ enquiry.total_amount_ntd|default:0|floatformat:2 }}</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                {# ... 檔案附件區塊維持不變 ... #}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4 class="mb-0"><i class="bi bi-paperclip"></i> 檔案附件</h4>
+                    <button class="btn btn-sm btn-success open-modal" data-url="{% url 'lead_enquiries:enquiry_attachment_upload' enquiry_pk=enquiry.pk %}">
+                        <i class="bi bi-upload"></i> 上傳檔案
+                    </button>
+                </div>
+                {% if enquiry.attachments.all %}
+                    <div class="list-group">
+                        {% for attachment in enquiry.attachments.all %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <a href="{{ attachment.file.url }}" target="_blank"><i class="bi bi-file-earmark-arrow-down"></i> {{ attachment }}</a>
+                                {% if attachment.description %}
+                                <small class="text-muted d-block">{{ attachment.description }}</small>
+                                {% endif %}
+                                <small class="text-muted">由 {{ attachment.uploaded_by.username }} 於 {{ attachment.uploaded_at|date:"Y-m-d" }} 上傳</small>
+                            </div>
+                            <button class="btn btn-outline-danger btn-sm py-0 px-1 open-modal" data-url="{% url 'lead_enquiries:enquiry_attachment_delete' pk=attachment.id %}">刪除</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center p-3 bg-light rounded border">尚無附件</div>
+                {% endif %}
+            </div>
+
+            <div>
+                {# ... 追蹤紀錄區塊維持不變 ... #}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4 class="mb-0"><i class="bi bi-chat-left-text"></i> 追蹤紀錄</h4>
+                    <button class="btn btn-sm btn-primary open-modal" data-url="{% url 'lead_enquiries:enquiry_track_create' enquiry_pk=enquiry.pk %}">
+                        <i class="bi bi-plus"></i> 新增紀錄
+                    </button>
+                </div>
+                {% if enquiry.tracks.all %}
+                    <div class="list-group">
+                        {% for track in enquiry.tracks.all %}
+                        <div class="list-group-item list-group-item-action">
+                             <p class="mb-1">{{ track.content|linebreaksbr }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">由 {{ track.created_by.username }} 於 {{ track.created_at|date:"Y-m-d H:i" }} 記錄</small>
+                                {% if request.user == track.created_by %}
+                                <div>
+                                    <button class="btn btn-outline-secondary btn-sm py-0 px-1 open-modal" data-url="{% url 'lead_enquiries:enquiry_track_update' pk=track.id %}">編輯</button>
+                                    <button class="btn btn-outline-danger btn-sm py-0 px-1 open-modal" data-url="{% url 'lead_enquiries:enquiry_track_delete' pk=track.id %}">刪除</button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center p-3 bg-light rounded border">尚無追蹤紀錄</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

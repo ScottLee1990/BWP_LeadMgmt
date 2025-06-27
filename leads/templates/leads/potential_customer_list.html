@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block extra_head %}
+<style>
+    .table-hover tbody tr:hover { background-color: #e6f7ff; }
+    .table th, .table td { vertical-align: middle; }
+    .sort-icon { color: #888; margin-left: 5px; }
+    .sort-icon.active { color: #000; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">潛在客戶總表</h2>
+
+{% with 'q='|add:query|add:'&rank='|add:rank_filter|add:'&status='|add:status_filter|add:'&owner='|add:owner_filter as filter_query %}
+
+<form method="get" class="row g-3 mb-4 align-items-center">
+    <div class="col-md-4">
+        <input type="text" name="q" class="form-control" placeholder="搜尋公司、產品、需求" value="{{ query }}">
+    </div>
+    <div class="col-md-2">
+        <select name="rank" class="form-select">
+            <option value="">所有評級</option>
+            {% for value, label in rank_choices %}
+                <option value="{{ value }}" {% if rank_filter == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="status" class="form-select">
+            <option value="">所有狀態</option>
+            {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if status_filter == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="owner" class="form-select">
+            <option value="">所有業務</option>
+            {% for owner in owners %}
+                <option value="{{ owner }}" {% if owner_filter == owner|stringformat:"s" %}selected{% endif %}>{{ owner }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary w-100">套用</button>
+        <a href="{% url 'leads:potential_customer_list' %}" class="btn btn-secondary w-100">清除</a>
+    </div>
+</form>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{% url 'leads:potential_customer_create' %}" class="btn btn-success">➕ 新增客戶</a>
+    <form method="get" action="{% url 'leads:export_customers_csv' %}" class="m-0">
+        <input type="hidden" name="q" value="{{ query }}">
+        <input type="hidden" name="rank" value="{{ rank_filter }}">
+        <input type="hidden" name="status" value="{{ status_filter }}">
+        <input type="hidden" name="owner" value="{{ owner_filter }}">
+        <input type="hidden" name="sort" value="{{ sort_field }}">
+        <input type="hidden" name="order" value="{{ sort_order }}">
+        <button type="submit" class="btn btn-info text-white">📁 匯出 CSV</button>
+    </form>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped table-hover">
+        <thead class="table-light">
+            <tr>
+                <th><a href="?{{ filter_query }}&sort=company_name&order={% if sort_field == 'company_name' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">公司名稱<span class="sort-icon {% if sort_field == 'company_name' %}active{% endif %}">{% if sort_field == 'company_name' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
+                <th><a href="?{{ filter_query }}&sort=country&order={% if sort_field == 'country' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">國家<span class="sort-icon {% if sort_field == 'country' %}active{% endif %}">{% if sort_field == 'country' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
+                <th><a href="?{{ filter_query }}&sort=rank&order={% if sort_field == 'rank' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">評級<span class="sort-icon {% if sort_field == 'rank' %}active{% endif %}">{% if sort_field == 'rank' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
+                <th><a href="?{{ filter_query }}&sort=status&order={% if sort_field == 'status' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">狀態<span class="sort-icon {% if sort_field == 'status' %}active{% endif %}">{% if sort_field == 'status' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
+                <th>負責業務</th>
+                {# 【新增】最後聯絡時間的表頭與排序連結 #}
+                <th><a href="?{{ filter_query }}&sort=last_contacted_at&order={% if sort_field == 'last_contacted_at' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">最後聯絡<span class="sort-icon {% if sort_field == 'last_contacted_at' %}active{% endif %}">{% if sort_field == 'last_contacted_at' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
+                <th><a href="?{{ filter_query }}&sort=created_at&order={% if sort_field == 'created_at' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">建立時間<span class="sort-icon {% if sort_field == 'created_at' %}active{% endif %}">{% if sort_field == 'created_at' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in potential_customers %}
+            <tr>
+                <td><a href="{% url 'leads:potential_customer_detail' pk=customer.pk %}">{{ customer.company_name }}</a></td>
+                <td>{{ customer.get_country_display }}</td>
+                <td>{{ customer.get_rank_display }}</td>
+                <td>{{ customer.get_status_display }}</td>
+                <td>{{ customer.sales_incharge.username|default:"-" }}</td>
+                {# 【新增】顯示最後聯絡時間的資料格，如果沒有紀錄則顯示橫線 #}
+                <td>
+                    {% if customer.last_contacted_at %}
+                        {{ customer.last_contacted_at|date:"Y-m-d" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{{ customer.created_at|date:"Y-m-d" }}</td>
+                <td><button class="btn btn-outline-danger btn-sm open-modal" data-url="{% url 'leads:potential_customer_delete' pk=customer.pk %}">刪除</button></td>
+            </tr>
+            {% empty %}
+            {# 【修改】更新 colspan 以符合新的欄位數量 #}
+            <tr><td colspan="9" class="text-center">沒有找到符合條件的客戶。</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if potential_customers.has_previous %}
+            <li class="page-item"><a class="page-link" href="?{{ filter_query }}&sort={{ sort_field }}&order={{ sort_order }}&page={{ potential_customers.previous_page_number }}">上一頁</a></li>
+        {% else %}
+            <li class="page-item disabled"><a class="page-link" href="#">上一頁</a></li>
+        {% endif %}
+
+        {% for num in potential_customers.paginator.page_range %}
+            {% if potential_customers.number == num %}
+                <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+            {% else %}
+                <li class="page-item"><a class="page-link" href="?{{ filter_query }}&sort={{ sort_field }}&order={{ sort_order }}&page={{ num }}">{{ num }}</a></li>
+            {% endif %}
+        {% endfor %}
+
+        {% if potential_customers.has_next %}
+            <li class="page-item"><a class="page-link" href="?{{ filter_query }}&sort={{ sort_field }}&order={{ sort_order }}&page={{ potential_customers.next_page_number }}">下一頁</a></li>
+        {% else %}
+            <li class="page-item disabled"><a class="page-link" href="#">下一頁</a></li>
+        {% endif %}
+    </ul>
+</nav>
+
+{% endwith %}
+{% endblock %}

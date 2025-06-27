@@ -1,0 +1,17 @@
+{% load crispy_forms_tags %}
+
+{# 處理檔案上傳的表單，必須加上 enctype="multipart/form-data" #}
+<form method="post" action="{% url 'lead_enquiries:enquiry_attachment_upload' enquiry_pk=enquiry.pk %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-upload"></i> 上傳附件至 [{{ enquiry.bwp_no }}]</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        {{ form|crispy }}
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-success">上傳</button>
+    </div>
+</form>

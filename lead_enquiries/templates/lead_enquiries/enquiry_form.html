@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %} {# 載入 Crispy Forms 的標籤庫 #}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h2 class="mb-0">
+                {# 【修改】更新標題以符合「報價單」的情境 #}
+                {% if form.instance.pk %}
+                    <i class="bi bi-pencil-square"></i> 編輯報價單
+                {% else %}
+                    <i class="bi bi-plus-circle"></i> 新增報價單
+                {% endif %}
+            </h2>
+        </div>
+        <div class="card-body">
+
+            {# 因為我們在 forms.py 中設定了 form_tag=False，所以需要自己加上 form 標籤 #}
+            <form method="post">
+                {% csrf_token %}
+
+                {# 這是 Crispy Forms 的魔法所在！ #}
+                {# 這一行會自動渲染出我們在 forms.py 中用 Fieldset, Row, Column 定義好的完整佈局 #}
+                {{ form|crispy }}
+
+                <div class="mt-4 pt-3 border-top d-flex gap-2">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-check-circle"></i> 儲存
+                    </button>
+                    {# 【修改】更新取消按鈕的返回連結 #}
+                    <a href="{{ request.META.HTTP_REFERER|default:_('lead_enquiries:enquiry_list') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </a>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

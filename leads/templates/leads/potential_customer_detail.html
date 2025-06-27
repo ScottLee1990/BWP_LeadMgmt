@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load static %} {# 如果您有使用 static 檔案，記得載入 #}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+            <h2 class="mb-1">{{ potential_customer.company_name }}</h2>
+            <div class="d-flex gap-2">
+                <span class="badge bg-primary">{{ potential_customer.get_status_display }}</span>
+                <span class="badge bg-warning text-dark">評級: {{ potential_customer.rank|default:"未評級" }}</span>
+                <span class="badge bg-secondary">{{ potential_customer.get_country_display }}</span>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-shrink-0">
+            <form method="post" action="{% url 'leads:toggle_pin' pk=potential_customer.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn {% if potential_customer.is_pinned %}btn-info{% else %}btn-outline-info{% endif %}">
+                    <i class="bi {% if potential_customer.is_pinned %}bi-pin-angle-fill{% else %}bi-pin-angle{% endif %}"></i>
+                    {% if potential_customer.is_pinned %}取消關注{% else %}重點關注{% endif %}
+                </button>
+            </form>
+            {% if request.user == potential_customer.sales_incharge %}
+                <a href="{% url 'leads:potential_customer_update' pk=potential_customer.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil-square"></i> 修改
+                </a>
+                <button class="btn btn-outline-danger open-modal" data-url="{% url 'leads:potential_customer_delete' pk=potential_customer.pk %}">
+                    <i class="bi bi-trash"></i> 刪除
+                </button>
+            {% endif %}
+            <a href="{% url 'leads:potential_customer_list' %}" class="btn btn-light border">
+                <i class="bi bi-arrow-left"></i> 返回
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header fw-bold">
+                    <i class="bi bi-file-earmark-text"></i> 基本資料
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">公司網站</strong>
+                            <a href="{{ potential_customer.website }}" target="_blank" rel="noopener noreferrer">{{ potential_customer.website|default:"-" }}</a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">公司電話</strong>
+                            {{ potential_customer.phone|default:"-" }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">公司Email</strong>
+                            <a href="mailto:{{ potential_customer.email }}">{{ potential_customer.email|default:"-" }}</a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">交易幣別</strong>
+                            {{ potential_customer.get_currency_display|default:"-" }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">客戶來源</strong>
+                            {{ potential_customer.get_source_display|default:"-" }}
+                        </div>
+                         <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">公司類型</strong>
+                            {{ potential_customer.get_company_type_display|default:"-" }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">需求項目</strong>
+                            {{ potential_customer.required_products|default:"-" }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">業務負責人</strong>
+                            {{ potential_customer.sales_incharge.username|default:"未分配" }}
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong class="text-muted d-block">公司產業</strong>
+                            {# 【修正】使用我們在 model 中新增的 get_industries_labels 屬性 #}
+                            {% for label in potential_customer.get_industries_labels %}
+                                <span class="badge bg-success me-1">{{ label }}</span>
+                            {% empty %}
+                                <span class="text-muted">-</span>
+                            {% endfor %}
+                        </div>
+                        <div class="col-12 mb-3">
+                             <strong class="text-muted d-block">備註</strong>
+                             <div class="p-2 bg-light rounded border mt-1" style="min-height: 80px;">
+                                 {{ potential_customer.notes|linebreaksbr|default:"-" }}
+                             </div>
+                        </div>
+                        <div class="col-12 text-muted small text-end border-top pt-2">
+                            建立於 {{ potential_customer.created_at|date:"Y-m-d H:i" }} /
+                            最後更新於 {{ potential_customer.updated_at|date:"Y-m-d H:i" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0"><i class="bi bi-file-earmark-ruled"></i> 報價單列表</h4>
+                    {# 這個按鈕會跳轉到新增報價單的頁面 #}
+                    <a href="{% url 'lead_enquiries:enquiry_create' %}?customer_id={{ potential_customer.pk }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus"></i> 新增報價單
+                    </a>
+                </div>
+                {% if potential_customer.enquiries.all %}
+                    <div class="list-group">
+                        {# 直接使用 a.enquiries.all 來遍歷所有關聯的報價單 #}
+                        {% for enquiry in potential_customer.enquiries.all %}
+                        <a href="{% url 'lead_enquiries:enquiry_detail' pk=enquiry.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1 fw-bold">{{ enquiry.bwp_no }}</h6>
+                                <small class="text-muted">{{ enquiry.updated_at|date:"Y-m-d" }}</small>
+                            </div>
+                            <div class="d-flex w-100 justify-content-between">
+                                <div>
+                                    <span class="badge bg-info">{{ enquiry.get_status_display }}</span>
+                                </div>
+                                <div class="fw-bold">
+                                   <small>總額:</small> {{ enquiry.total_amount|floatformat:2 }}
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center p-3 bg-light rounded border">尚無報價紀錄</div>
+                {% endif %}
+            </div>
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0"><i class="bi bi-people-fill"></i> 聯絡人</h4>
+                    <button class="btn btn-sm btn-primary open-modal" data-url="{% url 'leads:contact_create' pk=potential_customer.pk %}">
+                        <i class="bi bi-plus"></i> 新增
+                    </button>
+                </div>
+                {% if potential_customer.contacts.all %}
+                    <div class="list-group">
+                        {% for contact in potential_customer.contacts.all %}
+                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold">{{ contact.name }}</div>
+                                <div class="small text-muted">{{ contact.position }}</div>
+                                <div class="small text-muted"><i class="bi bi-telephone-fill"></i> {{ contact.phone|default:"-" }}</div>
+                                <div class="small text-muted"><i class="bi bi-envelope-fill"></i> {{ contact.email|default:"-" }}</div>
+                            </div>
+                            <div class="btn-group-vertical">
+                                <button class="btn btn-outline-secondary btn-sm open-modal" data-url="{% url 'leads:contact_update' contact.id %}">編輯</button>
+                                <button class="btn btn-outline-danger btn-sm open-modal" data-url="{% url 'leads:contact_delete' contact.id %}">刪除</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center p-3 bg-light rounded border">尚無聯絡人</div>
+                {% endif %}
+            </div>
+
+            <div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0"><i class="bi bi-card-checklist"></i> 開發紀錄</h4>
+                    <button class="btn btn-sm btn-primary open-modal" data-url="{% url 'leads:contact_log_create' pk=potential_customer.pk %}">
+                        <i class="bi bi-plus"></i> 新增
+                    </button>
+                </div>
+                {% if potential_customer.logs.all %}
+                    <div class="list-group">
+                        {% for log in potential_customer.logs.all %}
+                        <div class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1 fw-bold">{{ log.topic }}</h6>
+                                <small class="text-muted">{{ log.created_at|date:"Y-m-d" }}</small>
+                            </div>
+                            <p class="mb-1">{{ log.content|linebreaksbr }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">聯絡人: {{ log.contact.name }} / 記錄者: {{ log.created_by.username }}</small>
+                                <div>
+                                    <button class="btn btn-outline-secondary btn-sm py-0 px-1 open-modal" data-url="{% url 'leads:contact_log_update' log.id %}">編輯</button>
+                                    <button class="btn btn-outline-danger btn-sm py-0 px-1 open-modal" data-url="{% url 'leads:contact_log_delete' log.id %}">刪除</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center p-3 bg-light rounded border">尚無開發紀錄</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
