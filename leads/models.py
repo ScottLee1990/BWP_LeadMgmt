@@ -1,5 +1,3 @@
-from tkinter.constants import CASCADE
-
 from django.db import models
 from multiselectfield import MultiSelectField # 多選第三方套件
 from django.conf import settings # 帶入user
