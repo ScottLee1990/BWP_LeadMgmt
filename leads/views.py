@@ -357,8 +357,8 @@ def export_customers_csv(request):
 
     for c in potential_customers:
         writer.writerow([
-            c.name,
-            c.country.name if c.country else '',
+            c.company_name,
+            c.get_country_display(),
             c.get_rank_display(),  # 使用 get_FOO_display 獲取 choice 的可讀名稱
             c.get_status_display(),
             c.sales_incharge.username if c.sales_incharge else '',

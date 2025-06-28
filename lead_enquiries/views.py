@@ -356,7 +356,7 @@ def export_enquiries_csv(request):
             enquiry.enquiry_no,
             enquiry.potential_customer.company_name,
             enquiry.get_status_display(),
-            enquiry.annotated_total_amount or 0,
+            enquiry.annotated_total_amount_ntd or 0,
             enquiry.created_by.username,
             enquiry.created_at.strftime('%Y-%m-%d %H:%M'),
         ])

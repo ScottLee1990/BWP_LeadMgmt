@@ -15,44 +15,54 @@
 <body class="bg-light">
 
     {# ================== Navbar ================== #}
+
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background: linear-gradient(to left, #3c5691, #183473);">
       <div class="container-fluid">
+        {# --- 網站標題 (維持不變) --- #}
         <a class="navbar-brand d-flex align-items-center fw-bold" href="{% url 'main:main' %}">
           <img src="{% static 'images/logo.png' %}" alt="Logo" height="40" class="me-2">
-          博威精密-開發管理
+          博威精密工業
         </a>
 
-        <div class="collapse navbar-collapse">
+        {# --- 【新增】漢堡選單按鈕 --- #}
+        {# 這個按鈕在桌面版 (lg以上) 會自動隱藏 #}
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavContent" aria-controls="navbarNavContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        {# --- 【修改】為可收合的 div 加上 ID，並將右側使用者資訊也移入 --- #}
+        <div class="collapse navbar-collapse" id="navbarNavContent">
+          {# 左側導覽連結 (維持不變) #}
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            {# 【優化】使用 request.resolver_match.app_name 來判斷並高亮目前的導覽標籤 #}
             <li class="nav-item">
               <a class="nav-link fw-bold {% if request.resolver_match.app_name == 'main' %}active{% endif %}" href="{% url 'main:main' %}">進度總覽</a>
             </li>
             <li class="nav-item">
               <a class="nav-link fw-bold {% if request.resolver_match.app_name == 'leads' %}active{% endif %}" href="{% url 'leads:potential_customer_list' %}">潛在客戶管理</a>
             </li>
-            {# 【新增】加入「報價管理」的導覽標籤 #}
             <li class="nav-item">
               <a class="nav-link fw-bold {% if request.resolver_match.app_name == 'lead_enquiries' %}active{% endif %}" href="{% url 'lead_enquiries:enquiry_list' %}">報價管理</a>
             </li>
           </ul>
-        </div>
 
-        <div class="d-flex align-items-center gap-3">
-          {% if user.is_authenticated %}
-            <span class="navbar-text text-white">您好，{{ user.username }}</span>
-            <form action="{% url 'accounts:logout' %}" method="post" class="d-inline mb-0">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-outline-light btn-sm">登出</button>
-            </form>
-          {% endif %}
+          {# 右側使用者資訊 & 按鈕 (從外部移入) #}
+          <div class="d-flex align-items-center gap-3">
+            {% if user.is_authenticated %}
+              <span class="navbar-text text-white">您好，{{ user.username }}</span>
+              <form action="{% url 'accounts:logout' %}" method="post" class="d-inline mb-0">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-light btn-sm">登出</button>
+              </form>
+            {% endif %}
 
-          {% if recent_activity_logs %}
-            <a data-bs-toggle="modal" data-bs-target="#activityLogModal" class="btn btn-outline-secondary btn-sm text-white" title="操作紀錄">
-                <i class="bi bi-clock-history"></i>
-            </a>
-          {% endif %}
-        </div>
+            {% if recent_activity_logs %}
+              <a data-bs-toggle="modal" data-bs-target="#activityLogModal" class="btn btn-outline-secondary btn-sm text-white" title="操作紀錄">
+                  <i class="bi bi-clock-history"></i>
+              </a>
+            {% endif %}
+          </div>
+        </div> {# --- navbar-collapse 結束標籤 --- #}
+
       </div>
     </nav>
 

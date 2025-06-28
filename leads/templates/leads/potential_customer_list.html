@@ -43,13 +43,13 @@
         </select>
     </div>
     <div class="col-md-2 d-flex gap-2">
-        <button type="submit" class="btn btn-primary w-100">套用</button>
-        <a href="{% url 'leads:potential_customer_list' %}" class="btn btn-secondary w-100">清除</a>
+        <button type="submit" class="btn btn-primary w-50 btn-sm">套用</button>
+        <a href="{% url 'leads:potential_customer_list' %}" class="btn btn-secondary w-50 btn-sm">清除</a>
     </div>
 </form>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <a href="{% url 'leads:potential_customer_create' %}" class="btn btn-success">➕ 新增客戶</a>
+    <a href="{% url 'leads:potential_customer_create' %}" class="btn btn-success btn-sm">新增</a>
     <form method="get" action="{% url 'leads:export_customers_csv' %}" class="m-0">
         <input type="hidden" name="q" value="{{ query }}">
         <input type="hidden" name="rank" value="{{ rank_filter }}">
@@ -57,7 +57,7 @@
         <input type="hidden" name="owner" value="{{ owner_filter }}">
         <input type="hidden" name="sort" value="{{ sort_field }}">
         <input type="hidden" name="order" value="{{ sort_order }}">
-        <button type="submit" class="btn btn-info text-white">📁 匯出 CSV</button>
+        <button type="submit" class="btn btn-dark text-white btn-sm">匯出 CSV</button>
     </form>
 </div>
 
@@ -66,6 +66,7 @@
         <thead class="table-light">
             <tr>
                 <th><a href="?{{ filter_query }}&sort=company_name&order={% if sort_field == 'company_name' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">公司名稱<span class="sort-icon {% if sort_field == 'company_name' %}active{% endif %}">{% if sort_field == 'company_name' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
+                <th>網址</th>
                 <th><a href="?{{ filter_query }}&sort=country&order={% if sort_field == 'country' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">國家<span class="sort-icon {% if sort_field == 'country' %}active{% endif %}">{% if sort_field == 'country' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
                 <th><a href="?{{ filter_query }}&sort=rank&order={% if sort_field == 'rank' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">評級<span class="sort-icon {% if sort_field == 'rank' %}active{% endif %}">{% if sort_field == 'rank' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
                 <th><a href="?{{ filter_query }}&sort=status&order={% if sort_field == 'status' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">狀態<span class="sort-icon {% if sort_field == 'status' %}active{% endif %}">{% if sort_field == 'status' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
@@ -77,23 +78,24 @@
             </tr>
         </thead>
         <tbody>
-            {% for customer in potential_customers %}
+            {% for potential_customer in potential_customers %}
             <tr>
-                <td><a href="{% url 'leads:potential_customer_detail' pk=customer.pk %}">{{ customer.company_name }}</a></td>
-                <td>{{ customer.get_country_display }}</td>
-                <td>{{ customer.get_rank_display }}</td>
-                <td>{{ customer.get_status_display }}</td>
-                <td>{{ customer.sales_incharge.username|default:"-" }}</td>
+                <td><a href="{% url 'leads:potential_customer_detail' pk=potential_customer.pk %}">{{ potential_customer.company_name }}</a></td>
+                <td><a href="{{ potential_customer.website }}">{{ potential_customer.website }}</a></td>
+                <td>{{ potential_customer.get_country_display }}</td>
+                <td>{{ potential_customer.get_rank_display }}</td>
+                <td>{{ potential_customer.get_status_display }}</td>
+                <td>{{ potential_customer.sales_incharge.username|default:"-" }}</td>
                 {# 【新增】顯示最後聯絡時間的資料格，如果沒有紀錄則顯示橫線 #}
                 <td>
-                    {% if customer.last_contacted_at %}
-                        {{ customer.last_contacted_at|date:"Y-m-d" }}
+                    {% if potential_customer.last_contacted_at %}
+                        {{ potential_customer.last_contacted_at|date:"Y-m-d" }}
                     {% else %}
                         -
                     {% endif %}
                 </td>
-                <td>{{ customer.created_at|date:"Y-m-d" }}</td>
-                <td><button class="btn btn-outline-danger btn-sm open-modal" data-url="{% url 'leads:potential_customer_delete' pk=customer.pk %}">刪除</button></td>
+                <td>{{ potential_customer.created_at|date:"Y-m-d" }}</td>
+                <td><button class="btn btn-outline-danger btn-sm open-modal" data-url="{% url 'leads:potential_customer_delete' pk=potential_customer.pk %}">刪除</button></td>
             </tr>
             {% empty %}
             {# 【修改】更新 colspan 以符合新的欄位數量 #}

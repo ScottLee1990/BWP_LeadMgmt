@@ -35,20 +35,20 @@
         </select>
     </div>
     <div class="col-md-2 d-flex gap-2">
-        <button type="submit" class="btn btn-primary w-100">套用</button>
-        <a href="{% url 'lead_enquiries:enquiry_list' %}" class="btn btn-secondary w-100">清除</a>
+        <button type="submit" class="btn btn-primary w-50 btn-sm">套用</button>
+        <a href="{% url 'lead_enquiries:enquiry_list' %}" class="btn btn-secondary w-50 btn-sm">清除</a>
     </div>
 </form>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <a href="{% url 'lead_enquiries:enquiry_create' %}" class="btn btn-success">➕ 新增報價單</a>
+    <a href="{% url 'lead_enquiries:enquiry_create' %}" class="btn btn-success btn-sm" >新增</a>
     <form method="get" action="{% url 'lead_enquiries:export_enquiries_csv' %}" class="m-0">
         <input type="hidden" name="q" value="{{ query }}">
         <input type="hidden" name="status" value="{{ status_filter }}">
         <input type="hidden" name="owner" value="{{ owner_filter }}">
         <input type="hidden" name="sort" value="{{ sort_field }}">
         <input type="hidden" name="order" value="{{ sort_order }}">
-        <button type="submit" class="btn btn-info text-white">📁 匯出 CSV</button>
+        <button type="submit" class="btn btn-dark btn-sm text-white">匯出 CSV</button>
     </form>
 </div>
 
