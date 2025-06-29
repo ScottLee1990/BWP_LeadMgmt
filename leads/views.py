@@ -1,4 +1,8 @@
-#  views.py (Refactored and with Activity Log)
+#  views.py
+'''
+處理與PotentialCustomer、Contacts、ContactLogs這三個Model相關request
+包含完整的CRUD，並加入了使用者身份驗證、排序、篩選、分頁、操作紀錄和資料匯出等附加功能。
+'''
 
 import csv
 
@@ -19,22 +23,26 @@ from .models import PotentialCustomer, Contacts, ContactLogs
 
 # 所有使用的套件於上方匯入
 
+# -----輔助函式---------------------------------------------------------------------------
+
+# 後續list和輸出的部分都會套運查詢、篩選邏輯，在這個輔助函式管理
+# 根據前端回傳的filter做QuerySet的篩選和排序
 def _get_filtered_customers_queryset(request):
-    #  處理查詢和排序邏輯
-    query = request.GET.get('q', '')
-    rank_filter = request.GET.get('rank', '')
-    status_filter = request.GET.get('status', '')
-    owner_filter = request.GET.get('owner', '')
-    # 【修改】讓預設排序改為最後聯絡時間
-    sort_field = request.GET.get('sort', 'last_contacted_at')
+    query = request.GET.get('q', '') # 公司名、產業...等等
+    rank_filter = request.GET.get('rank', '') # 評級
+    status_filter = request.GET.get('status', '') # 狀態
+    owner_filter = request.GET.get('owner', '') # 負責人
+    sort_field = request.GET.get('sort', 'last_contacted_at') # 預設排序為最後聯絡時間
     sort_order = request.GET.get('order', 'desc')
 
-    # 【核心修改】使用 annotate 和 Max 來動態計算每個客戶的最後聯絡時間
-    # 這會為每一個 potential_customer 物件新增一個名為 'last_contacted_at' 的臨時屬性
+    # 用annotate和Max動態計算每個客戶的最後聯絡時間, annotate超好用
+    # 在potential_customer新增一個'last_contacted_at'的臨時屬性
+    # 處理QuerySet時，實際上還沒有內容存在，用__讓SQL理解跨模型連結
     potential_customers = PotentialCustomer.objects.annotate(
-        last_contacted_at=Max('logs__created_at') # 'logs' 是 ContactLogs 模型反向關聯的名稱
+        last_contacted_at=Max('logs__created_at') # logs是ContactLogs的related_name,用Max找出最大值也就是最後聯絡時間
     )
-
+    # 用上面get取得的值，對QuerySet增加過濾條件
+    # Q是用來判斷多重條件
     if query:
         potential_customers = potential_customers.filter(
             Q(company_name__icontains=query) |
@@ -48,66 +56,76 @@ def _get_filtered_customers_queryset(request):
     if owner_filter:
         potential_customers = potential_customers.filter(sales_incharge__username=owner_filter)
 
-    # 【修改】將我們 annotate 出來的 'last_contacted_at' 加入可排序的欄位列表
+    # 可排序的欄位列表,防止使用者找出隱藏資訊做排序
     valid_sort_fields = {'company_name', 'country', 'rank', 'status', 'created_at', 'last_contacted_at'}
     sort_by = sort_field if sort_field in valid_sort_fields else 'last_contacted_at'
-
+    # order_by根據有無'-'來判斷做decs或asc
     if sort_order == 'desc':
         sort_by = '-' + sort_by
 
     return potential_customers.order_by(sort_by)
 
+# -----PotentialCustomer的CRUD---------------------------------------------------------------------------
+
+# 潛在客戶總表,讀取過濾後的QuerySet並用Paginator包裝後回傳
 @login_required
 def potential_customer_list(request):
-    # 查詢邏輯保持不變
+    # 取得套用查詢過濾器的QuerySet
     potential_customers_qs = _get_filtered_customers_queryset(request)
-
-    owners = PotentialCustomer.objects.values_list('sales_incharge__username', flat=True).distinct()
+    # 將QuerySet用Paginator做分頁包裝
     paginator = Paginator(potential_customers_qs, 20)
     page = request.GET.get('page')
 
+    # 這邊是確保page是有效的,若非數字就跳到第1頁，若超過最大頁數則顯示最後一頁
     try:
-        # 【最終修正】將分頁物件統一命名為 'potential_customers'
         potential_customers = paginator.page(page)
     except PageNotAnInteger:
         potential_customers = paginator.page(1)
     except EmptyPage:
         potential_customers = paginator.page(paginator.num_pages)
 
+    # 設定篩選器的選項
+    # 從PotentialCustomer中取得所有的sales_incharge__username做為篩選器的選項,用.distinct確保不重複
+    owners = PotentialCustomer.objects.values_list('sales_incharge__username', flat=True).distinct()
     rank_choices = PotentialCustomer.RANK_CHOICES
     status_choices = PotentialCustomer.STATUS_CHOICES
 
     return render(request, 'leads/potential_customer_list.html', {
-        # 【最終修正】傳遞給模板的變數也統一為 'potential_customers'
         'potential_customers': potential_customers,
+        'owners': owners,
+        'rank_choices': rank_choices,
+        'status_choices': status_choices,
+        # 下面這些篩選器會隨著GET和前端作互動
         'query': request.GET.get('q', ''),
         'rank_filter': request.GET.get('rank', ''),
         'status_filter': request.GET.get('status', ''),
         'owner_filter': request.GET.get('owner', ''),
-        'owners': owners,
         'sort_field': request.GET.get('sort', 'created_at'),
         'sort_order': request.GET.get('order', 'desc'),
-        'rank_choices': rank_choices,
-        'status_choices': status_choices,
     })
 
-
+# 客戶詳細頁面
+# 用django內建的get_object_or_404簡單的用pk抓取對應的PotentialCustomer物件並回傳
+# get_object_or_404本身已包含try...except邏輯,好用
 @login_required
 def potential_customer_detail(request, pk):
     potential_customer = get_object_or_404(PotentialCustomer, pk=pk)
     return render(request, 'leads/potential_customer_detail.html', context={'potential_customer': potential_customer})
 
-
+# 建立新潛在客戶,user第一次連線時request是GET、回傳空白的form，而user點擊submit後會送出POST的request並儲存表單
 @login_required
 def potential_customer_create(request):
+    # 前端submit表單
     if request.method == 'POST':
         form = PotentialCustomerForm(request.POST)
+        # 檢查格式和必填
+        # 暫存表單後由後端將操作者填到sales_incharge欄位才儲存
         if form.is_valid():
             potential_customer = form.save(commit=False)
             potential_customer.sales_incharge = request.user
             potential_customer.save()
 
-            # --- 新增：寫入操作紀錄 ---
+            # 寫入操作紀錄
             LogEntry.objects.log_action(
                 user_id=request.user.id,
                 content_type_id=ContentType.objects.get_for_model(potential_customer).id,
@@ -118,20 +136,23 @@ def potential_customer_create(request):
             )
 
             return redirect('leads:potential_customer_list')
+    # 第一次連線時
     else:
         form = PotentialCustomerForm()
     return render(request, 'leads/potential_customer_form.html', context={'form': form})
 
-
+# 更新客戶資料
+# 用get_object_or_404和pk抓取已存在的PotentialCustomer的物件
 @login_required
 def potential_customer_update(request, pk):
     potential_customer = get_object_or_404(PotentialCustomer, pk=pk)
+    # 前端submit表單
     if request.method == 'POST':
         form = PotentialCustomerForm(request.POST, instance=potential_customer)
         if form.is_valid():
             updated_customer = form.save()
 
-            # --- 修改：寫入操作紀錄 ---
+            # 寫入操作紀錄
             LogEntry.objects.log_action(
                 user_id=request.user.id,
                 content_type_id=ContentType.objects.get_for_model(updated_customer).id,
@@ -142,20 +163,22 @@ def potential_customer_update(request, pk):
             )
 
             return redirect('leads:potential_customer_detail', pk=potential_customer.pk)
+    # 第一次GET,先提供目前物件的資訊
     else:
         form = PotentialCustomerForm(instance=potential_customer)
     return render(request, 'leads/potential_customer_form.html', context={'form': form})
 
-
+# 刪除客戶資料,結合前端modal
 @login_required
 def potential_customer_delete(request, pk):
     potential_customer = get_object_or_404(PotentialCustomer, pk=pk)
+    # 前端點擊確認
     if request.method == 'POST':
         customer_repr = str(potential_customer)  # 在刪除前先取得物件的文字表示
-
+        # django的內建刪除語法
         potential_customer.delete()
 
-        # --- 刪除：寫入操作紀錄 ---
+        # 寫入操作紀錄
         LogEntry.objects.log_action(
             user_id=request.user.id,
             content_type_id=ContentType.objects.get_for_model(PotentialCustomer).id,  # 物件已刪，需直接用模型
@@ -164,21 +187,24 @@ def potential_customer_delete(request, pk):
             action_flag=DELETION,
             change_message="刪除潛在客戶"
         )
+        # 前端收到下面的json表示操作順利完成
         return JsonResponse({'success': True})
+    # 第一次request,將物件資料用json提供給前端modal做渲染
     else:
         html_form = render_to_string('leads/potential_customer_delete_modal.html', {
             'potential_customer': potential_customer
         }, request=request)
         return JsonResponse({'html_form': html_form})
 
-
+# 設定關注客戶
+# 簡單的用pk取得並調整物件屬性後用save()儲存修改
 @login_required
 def toggle_pin(request, pk):
     potential_customer = get_object_or_404(PotentialCustomer, pk=pk)
     potential_customer.is_pinned = not potential_customer.is_pinned
     potential_customer.save()
 
-    # --- 修改：寫入操作紀錄 ---
+    # 寫入操作紀錄
     change_message = "置頂客戶" if potential_customer.is_pinned else "取消置頂客戶"
     LogEntry.objects.log_action(
         user_id=request.user.id,
@@ -191,10 +217,10 @@ def toggle_pin(request, pk):
     return redirect('leads:potential_customer_detail', pk=pk)
 
 
-# ===================================================================
-#  聯絡人 (Contacts) 視圖
-# ===================================================================
+# -----Contacts的CRUD---------------------------------------------------------------------------
 
+# 大致上和PotentialCustomer的CRUD邏輯相同,唯獨包含create和update也都使用回傳Json給前端Modal的方式
+# 需有PotentialCustomer才能建立Contact
 @login_required
 def contact_create(request, pk):
     potential_customer = get_object_or_404(PotentialCustomer, pk=pk)
@@ -205,7 +231,7 @@ def contact_create(request, pk):
             contact.potential_customer = potential_customer
             contact.save()
 
-            # --- 新增：寫入操作紀錄 ---
+            # 寫入操作紀錄
             LogEntry.objects.log_action(
                 user_id=request.user.id,
                 content_type_id=ContentType.objects.get_for_model(contact).id,
@@ -217,7 +243,7 @@ def contact_create(request, pk):
             return JsonResponse({'success': True})
     else:
         form = ContactsForm()
-
+    # 這邊是把template,form,potential_customer和form_action打包成html字串,再回傳JS可讀的Json
     html_form = render_to_string('leads/contact_form_modal.html', {
         'form': form,
         'potential_customer': potential_customer,
@@ -234,7 +260,7 @@ def contact_update(request, pk):
         if form.is_valid():
             updated_contact = form.save()
 
-            # --- 修改：寫入操作紀錄 ---
+            # 寫入操作紀錄
             LogEntry.objects.log_action(
                 user_id=request.user.id,
                 content_type_id=ContentType.objects.get_for_model(updated_contact).id,
@@ -262,7 +288,7 @@ def contact_delete(request, pk):
         contact_repr = f"{str(contact)} (屬於 {str(contact.potential_customer)})"  # 在刪除前先取得物件的文字表示
         contact.delete()
 
-        # --- 刪除：寫入操作紀錄 ---
+        # 寫入操作紀錄
         LogEntry.objects.log_action(
             user_id=request.user.id,
             content_type_id=ContentType.objects.get_for_model(Contacts).id,  # 物件已刪，需直接用模型
@@ -277,13 +303,10 @@ def contact_delete(request, pk):
         return JsonResponse({'html_form': html_form})
 
 
-# ===================================================================
-#  開發紀錄 (ContactLogs) 視圖
-#  註：此模型本身即為一種 "Log"，通常不需要再為其操作額外寫入 LogEntry，
-#  避免紀錄中出現「新增了一筆新增紀錄」這樣的冗餘資訊。
-#  因此，以下視圖保留原樣。
-# ===================================================================
+# -----ContactLogs的CRUD---------------------------------------------------------------------------
 
+# 和Contacts的CRUD邏輯幾乎相同
+# 需有PotentialCustomer才能建立ContactLog
 @login_required
 def contact_log_create(request, pk):
     potential_customer = get_object_or_404(PotentialCustomer, pk=pk)
@@ -294,8 +317,9 @@ def contact_log_create(request, pk):
             log.potential_customer = potential_customer
             log.created_by = request.user
             log.save()
-            potential_customer.last_contacted_at = log.created_at
-            potential_customer.save()
+            # 改用annotate提供last_contacted_at了，註解掉這個
+            # potential_customer.last_contacted_at = log.created_at
+            # potential_customer.save()
             return JsonResponse({'success': True})
     else:
         form = ContactLogsForm(potential_customer=potential_customer)
@@ -315,8 +339,9 @@ def contact_log_update(request, pk):
         form = ContactLogsForm(request.POST, instance=log, potential_customer=potential_customer)
         if form.is_valid():
             form.save()
-            potential_customer.last_contacted_at = log.created_at
-            potential_customer.save()
+            # 改用annotate提供last_contacted_at了，註解掉這個
+            # potential_customer.last_contacted_at = log.created_at
+            # potential_customer.save()
             return JsonResponse({'success': True})
     else:
         form = ContactLogsForm(instance=log, potential_customer=potential_customer)
@@ -330,6 +355,7 @@ def contact_log_update(request, pk):
 @login_required
 def contact_log_delete(request, pk):
     log = get_object_or_404(ContactLogs, pk=pk)
+    # 多一個操作者的驗證機制
     if log.created_by != request.user:
         return HttpResponseForbidden("你不是這筆開發紀錄的建立者")
     if request.method == 'POST':
@@ -339,9 +365,7 @@ def contact_log_delete(request, pk):
     return JsonResponse({'html_form': html_form})
 
 
-# ===================================================================
-#  匯出功能 (Export)
-# ===================================================================
+# -----匯出csv---------------------------------------------------------------------------
 
 @login_required
 def export_customers_csv(request):
