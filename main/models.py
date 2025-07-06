@@ -17,8 +17,6 @@ class DashboardGoal(models.Model):
         verbose_name='統計週期'
     )
     # 客戶相關目標
-    # 【修改】將 new_customer_target 的 verbose_name 改為「新成交客戶數目標」
-    # 這樣在後台的顯示才會是正確的
     new_customer_target = models.PositiveIntegerField(default=10, verbose_name='新成交客戶數目標')
 
     # 報價相關目標

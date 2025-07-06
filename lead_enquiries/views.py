@@ -7,6 +7,7 @@ from django.contrib.admin.models import LogEntry, ADDITION, CHANGE, DELETION
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models import Q, Sum, F, ExpressionWrapper, FloatField
+# Q,F,ExpressionWrapper使用場合還要再多練習
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
@@ -20,22 +21,18 @@ from .models import Enquiry, EnquiryItem, EnquiryTrack, STATUS_CHOICES, EnquiryA
 from django.contrib.auth.models import User
 
 
-# ===================================================================
-#  輔助函式 (Helper Functions)
-# ===================================================================
+# 輔助函式
 
+# 處理報價單 (Enquiry) 的查詢、過濾和排序邏輯。
 def _get_filtered_enquiries_queryset(request):
-    """
-    處理報價單 (Enquiry) 的查詢、過濾和排序邏輯。
-    """
+
     query = request.GET.get('q', '')
     status_filter = request.GET.get('status', '')
     owner_filter = request.GET.get('owner', '')
     sort_field = request.GET.get('sort', 'created_at')
     sort_order = request.GET.get('order', 'desc')
-
     enquiries = Enquiry.objects.select_related('potential_customer', 'created_by').all()
-
+    # 篩選區, Q 用來做多條件判斷
     if query:
         enquiries = enquiries.filter(
             Q(bwp_no__icontains=query) |
@@ -48,13 +45,11 @@ def _get_filtered_enquiries_queryset(request):
     if owner_filter:
         enquiries = enquiries.filter(created_by__username=owner_filter)
 
-    # 【修正】將 valid_sort_fields 中的 'total_amount_ntd' 改為 'annotated_total_amount_ntd'
     valid_sort_fields = {'bwp_no', 'potential_customer__company_name', 'status', 'created_at',
                          'annotated_total_amount_ntd'}
 
     sort_by = sort_field if sort_field in valid_sort_fields else 'created_at'
 
-    # 【修正】對新的欄位名稱進行排序
     if 'annotated_total_amount_ntd' in sort_by:
         enquiries = enquiries.annotate(
             annotated_total_amount_ntd=ExpressionWrapper(
@@ -69,16 +64,14 @@ def _get_filtered_enquiries_queryset(request):
     return enquiries.order_by(sort_by)
 
 
-# ===================================================================
-#  報價單 (Enquiry) 視圖 - Full Page
-# ===================================================================
 
+# 報價單
 @login_required
 def enquiry_list(request):
     enquiries_qs = _get_filtered_enquiries_queryset(request)
 
-    # 【修正】高效能計算台幣總金額
-    # 【修正】annotate 產生的欄位改名
+    # F 從資料庫層級、跨模型去抓關聯的items的Attr
+    # 不需要把物件都讀取出來，執行大量運算時效率佳
     enquiries_with_total = enquiries_qs.annotate(
         annotated_total_amount_ntd=ExpressionWrapper(
             Sum(F('items__quantity') * F('items__unit_price') * F('items__exchange_rate')),
@@ -111,19 +104,19 @@ def enquiry_list(request):
     }
     return render(request, 'lead_enquiries/enquiry_list.html', context)
 
-
+# 報價詳細頁
 @login_required
 def enquiry_detail(request, pk):
     enquiry = get_object_or_404(Enquiry, pk=pk)
-    # 使用 @property 來計算單一物件的總額
     context = {'enquiry': enquiry}
     return render(request, 'lead_enquiries/enquiry_detail.html', context)
 
-
+# 建立報價
 @login_required
 def enquiry_create(request):
     initial_data = {}
     customer_id = request.GET.get('customer_id')
+    # 建立報價可從 潛在客戶的表單執行 也可從Enquiry區塊執行 若從客戶表單執行會自動代入，否則要選取一個有效客戶
     if customer_id:
         try:
             customer = PotentialCustomer.objects.get(pk=customer_id)
@@ -136,13 +129,11 @@ def enquiry_create(request):
         if form.is_valid():
             enquiry = form.save(commit=False)
             enquiry.created_by = request.user
-
             if 'potential_customer' in initial_data:
                 enquiry.potential_customer = initial_data['potential_customer']
 
             enquiry.save()
 
-            # 【修正】補上完整的 LogEntry 呼叫
             LogEntry.objects.log_action(
                 user_id=request.user.id,
                 content_type_id=ContentType.objects.get_for_model(enquiry).id,
@@ -151,14 +142,13 @@ def enquiry_create(request):
                 action_flag=ADDITION,
                 change_message="建立報價單"
             )
-            # 這裡的 pk=enquiry.pk 之前可能會出錯，因為 'enquiry' 物件還未完全儲存
-            # 現在我們在 log 之後重導向，是安全的
             return redirect('lead_enquiries:enquiry_detail', pk=enquiry.pk)
     else:
         form = EnquiryForm(initial=initial_data)
 
     return render(request, 'lead_enquiries/enquiry_form.html', {'form': form})
 
+# 修改報價
 @login_required
 def enquiry_update(request, pk):
     enquiry = get_object_or_404(Enquiry, pk=pk)
@@ -175,7 +165,7 @@ def enquiry_update(request, pk):
         form = EnquiryForm(instance=enquiry)
     return render(request, 'lead_enquiries/enquiry_form.html', {'form': form})
 
-
+# 刪除報價 - AJAX Modals
 @login_required
 def enquiry_delete(request, pk):
     enquiry = get_object_or_404(Enquiry, pk=pk)
@@ -191,7 +181,7 @@ def enquiry_delete(request, pk):
     html_form = render_to_string('lead_enquiries/enquiry_delete_modal.html', context, request=request)
     return JsonResponse({'html_form': html_form})
 
-
+# 加入關注
 @login_required
 def toggle_enquiry_pin(request, pk):
     enquiry = get_object_or_404(Enquiry, pk=pk)
@@ -204,10 +194,8 @@ def toggle_enquiry_pin(request, pk):
     return redirect('lead_enquiries:enquiry_detail', pk=pk)
 
 
-# ===================================================================
-#  報價單品項 (EnquiryItem) 視圖 - AJAX Modals
-# ===================================================================
 
+# 報價單品項 - AJAX Modals
 @login_required
 def enquiry_item_create(request, enquiry_pk):
     enquiry = get_object_or_404(Enquiry, pk=enquiry_pk)
@@ -230,7 +218,7 @@ def enquiry_item_create(request, enquiry_pk):
     html_form = render_to_string('lead_enquiries/item_form_modal.html', context, request=request)
     return JsonResponse({'html_form': html_form})
 
-
+# 更新報價單品項
 @login_required
 def enquiry_item_update(request, pk):
     item = get_object_or_404(EnquiryItem, pk=pk)
@@ -251,7 +239,7 @@ def enquiry_item_update(request, pk):
     html_form = render_to_string('lead_enquiries/item_form_modal.html', context, request=request)
     return JsonResponse({'html_form': html_form})
 
-
+# 刪除報價單品項
 @login_required
 def enquiry_item_delete(request, pk):
     item = get_object_or_404(EnquiryItem, pk=pk)
@@ -270,10 +258,8 @@ def enquiry_item_delete(request, pk):
     return JsonResponse({'html_form': html_form})
 
 
-# ===================================================================
-#  報價單追蹤 (EnquiryTrack) 視圖 - AJAX Modals
-# ===================================================================
 
+# 報價單追蹤 - AJAX Modals
 @login_required
 def enquiry_track_create(request, enquiry_pk):
     enquiry = get_object_or_404(Enquiry, pk=enquiry_pk)
@@ -293,7 +279,7 @@ def enquiry_track_create(request, enquiry_pk):
     html_form = render_to_string('lead_enquiries/track_form_modal.html', context, request=request)
     return JsonResponse({'html_form': html_form})
 
-
+# 更新報價單追蹤紀錄
 @login_required
 def enquiry_track_update(request, pk):
     track = get_object_or_404(EnquiryTrack, pk=pk)
@@ -312,7 +298,7 @@ def enquiry_track_update(request, pk):
     html_form = render_to_string('lead_enquiries/track_form_modal.html', context, request=request)
     return JsonResponse({'html_form': html_form})
 
-
+# 刪除報價單追蹤紀錄
 @login_required
 def enquiry_track_delete(request, pk):
     track = get_object_or_404(EnquiryTrack, pk=pk)
@@ -327,20 +313,16 @@ def enquiry_track_delete(request, pk):
     return JsonResponse({'html_form': html_form})
 
 
-# ===================================================================
-#  匯出功能 (Export)
-# ===================================================================
 
+# 匯出功能
 @login_required
 def export_enquiries_csv(request):
-    # 【修正】匯出時，annotate 的欄位改名
     enquiries = _get_filtered_enquiries_queryset(request).annotate(
         annotated_total_amount_ntd=ExpressionWrapper(
             Sum(F('items__quantity') * F('items__unit_price') * F('items__exchange_rate')),
             output_field=FloatField()
         )
     )
-
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response.write('\ufeff')
@@ -360,10 +342,9 @@ def export_enquiries_csv(request):
             enquiry.created_by.username,
             enquiry.created_at.strftime('%Y-%m-%d %H:%M'),
         ])
-
     return response
 
-
+# 上傳附件
 @login_required
 def enquiry_attachment_upload(request, enquiry_pk):
     enquiry = get_object_or_404(Enquiry, pk=enquiry_pk)
@@ -383,7 +364,7 @@ def enquiry_attachment_upload(request, enquiry_pk):
     html_form = render_to_string('lead_enquiries/attachment_form_modal.html', context, request=request)
     return JsonResponse({'html_form': html_form})
 
-
+# 刪除附件
 @login_required
 def enquiry_attachment_delete(request, pk):
     attachment = get_object_or_404(EnquiryAttachment, pk=pk)

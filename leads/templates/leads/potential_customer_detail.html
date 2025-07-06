@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %} {# 如果您有使用 static 檔案，記得載入 #}
+{% load static %}
 
 {% block content %}
 <div class="container mt-4 mb-5">
@@ -77,7 +77,6 @@
                         </div>
                         <div class="col-12 mb-3">
                             <strong class="text-muted d-block">公司產業</strong>
-                            {# 【修正】使用我們在 model 中新增的 get_industries_labels 屬性 #}
                             {% for label in potential_customer.get_industries_labels %}
                                 <span class="badge bg-success me-1">{{ label }}</span>
                             {% empty %}
@@ -103,14 +102,12 @@
             <div class="mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="mb-0"><i class="bi bi-file-earmark-ruled"></i> 報價單列表</h4>
-                    {# 這個按鈕會跳轉到新增報價單的頁面 #}
                     <a href="{% url 'lead_enquiries:enquiry_create' %}?customer_id={{ potential_customer.pk }}" class="btn btn-sm btn-primary">
                         <i class="bi bi-plus"></i> 新增報價單
                     </a>
                 </div>
                 {% if potential_customer.enquiries.all %}
                     <div class="list-group">
-                        {# 直接使用 a.enquiries.all 來遍歷所有關聯的報價單 #}
                         {% for enquiry in potential_customer.enquiries.all %}
                         <a href="{% url 'lead_enquiries:enquiry_detail' pk=enquiry.pk %}" class="list-group-item list-group-item-action">
                             <div class="d-flex w-100 justify-content-between">

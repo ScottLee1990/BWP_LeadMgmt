@@ -1,8 +1,5 @@
 # 這個context_processorts是用來讀取Django內建的log訊息
-
 from django.contrib.admin.models import LogEntry
-from django.contrib.auth.models import User
-
 
 def activity_log_processor(request):
     # 預設不回傳任何 log

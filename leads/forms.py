@@ -1,16 +1,12 @@
-from django import forms
-from .models import PotentialCustomer,Contacts,ContactLogs
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Row, Column, Submit
-
 # leads/forms.py
+# Crispy_forms用法還沒有很熟 如果之後還常做MTV架構的全端網站，需要多練習
 
 from django import forms
 from .models import PotentialCustomer, Contacts, ContactLogs
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, Submit, Fieldset, Div
 
-
+# 潛在客戶區塊
 class PotentialCustomerForm(forms.ModelForm):
     class Meta:
         model = PotentialCustomer
@@ -19,23 +15,20 @@ class PotentialCustomerForm(forms.ModelForm):
             'currency', 'source', 'company_type', 'rank', 'industries',
             'required_products', 'status', 'notes'
         ]
-        # 【核心修正】在這裡明確指定 industries 欄位使用 Checkbox 小工具
-        # 同時也可以為 notes 指定 Textarea 的尺寸
         widgets = {
             'industries': forms.CheckboxSelectMultiple,
             'notes': forms.Textarea(attrs={'rows': 4}),
         }
 
+    # 這邊的覆寫是for Crispy form
     def __init__(self, *args, **kwargs):
         super(PotentialCustomerForm, self).__init__(*args, **kwargs)
 
         self.helper = FormHelper()
         self.helper.form_method = 'post'
-        # form_tag = False 表示我們會在模板中手動加入 <form> 和 {% csrf_token %} 標籤
-        # 這給了我們更大的彈性，例如在表單旁加上取消按鈕
+        # form_tag = False 可在模板中手動加入 <form> 和 {% csrf_token %} 標籤
+        # 操作上有更大的彈性，例如加上取消按鈕
         self.helper.form_tag = False
-
-        # 【核心修正】使用 Fieldset 和完整的欄位列表來重新定義佈局
         self.helper.layout = Layout(
             Fieldset(
                 '基本資料',  # Fieldset 的第一個參數是它的標題
@@ -72,22 +65,21 @@ class PotentialCustomerForm(forms.ModelForm):
                 '備註',
                 'notes'
             ),
-            # Crispy Forms 可以幫我們產生提交按鈕
-            # Submit('submit', '儲存客戶資料', css_class='btn-primary mt-3')
         )
 
-
-
+# 聯絡人區塊
 class ContactsForm(forms.ModelForm):
     class Meta:
         model = Contacts
         fields = ['name', 'position', 'phone', 'email', 'notes']
 
+# 聯絡紀錄區塊
 class ContactLogsForm(forms.ModelForm):
     class Meta:
         model = ContactLogs
         fields = ['contact', 'topic', 'content']
 
+    # 這邊的覆寫是for Crispy form
     def __init__(self, *args, **kwargs):
         # 記得從view丟出potential_customer參數
         potential_customer = kwargs.pop('potential_customer', None)

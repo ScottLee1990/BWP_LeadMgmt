@@ -11,28 +11,24 @@
 
     {% block extra_head %}{% endblock %}
 </head>
-{# 【優化】為 body 加入淺色背景，提升質感 #}
 <body class="bg-light">
 
     {# ================== Navbar ================== #}
 
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background: linear-gradient(to left, #3c5691, #183473);">
       <div class="container-fluid">
-        {# --- 網站標題 (維持不變) --- #}
         <a class="navbar-brand d-flex align-items-center fw-bold" href="{% url 'main:main' %}">
           <img src="{% static 'images/logo.png' %}" alt="Logo" height="40" class="me-2">
           博威精密工業
         </a>
 
-        {# --- 【新增】漢堡選單按鈕 --- #}
-        {# 這個按鈕在桌面版 (lg以上) 會自動隱藏 #}
+        {# --- 漢堡選單按鈕 --- #}
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavContent" aria-controls="navbarNavContent" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
 
-        {# --- 【修改】為可收合的 div 加上 ID，並將右側使用者資訊也移入 --- #}
         <div class="collapse navbar-collapse" id="navbarNavContent">
-          {# 左側導覽連結 (維持不變) #}
+          {# 左側導覽連結 #}
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item">
               <a class="nav-link fw-bold {% if request.resolver_match.app_name == 'main' %}active{% endif %}" href="{% url 'main:main' %}">進度總覽</a>
@@ -45,7 +41,7 @@
             </li>
           </ul>
 
-          {# 右側使用者資訊 & 按鈕 (從外部移入) #}
+          {# 右側使用者資訊 & 按鈕 #}
           <div class="d-flex align-items-center gap-3">
             {% if user.is_authenticated %}
               <span class="navbar-text text-white">您好，{{ user.username }}</span>
@@ -61,7 +57,7 @@
               </a>
             {% endif %}
           </div>
-        </div> {# --- navbar-collapse 結束標籤 --- #}
+        </div>
 
       </div>
     </nav>
@@ -124,7 +120,7 @@
     <script>
     $(document).ready(function () {
 
-      // --- Part 1: 開啟 Modal 並載入表單 (維持不變) ---
+      // --- Part 1: 開啟 Modal 並載入表單 ---
       $(document).on('click', '.open-modal', function (e) {
         e.preventDefault();
         const url = $(this).data('url');
@@ -143,13 +139,13 @@
         });
       });
 
-      // --- Part 2: 處理 Modal 內的表單提交 (核心修改處) ---
+      // --- Part 2: 處理 Modal 內的表單提交 ---
       $(document).on('submit', '#modalForm form', function (e) {
         e.preventDefault();
         const form = $(this);
         const url = form.attr('action');
 
-        // 【核心修改】檢查表單是否為檔案上傳類型
+        // 檢查表單是否為檔案上傳類型
         if (form.attr('enctype') === 'multipart/form-data') {
             // --- 如果是檔案上傳表單，使用 FormData 和 $.ajax ---
             console.log("AJAX POST (檔案): 正在提交表單到 " + url);
@@ -161,7 +157,7 @@
                 url: url,
                 type: 'POST',
                 data: formData,
-                // 【核心修改】必須設定這兩項為 false，才能讓 jQuery 正確傳送檔案
+                // 必須設定這兩項為 false，才能讓 jQuery 正確傳送檔案
                 processData: false,
                 contentType: false,
                 success: function(data) {

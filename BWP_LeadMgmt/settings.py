@@ -13,8 +13,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 
-import BWP_LeadMgmt
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -36,11 +34,11 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'main',
     'leads',
+    'lead_enquiries',
+    'accounts',
     'crispy_forms',
     'crispy_bootstrap5',
     'widget_tweaks',
-    'lead_enquiries',
-    'accounts',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -75,7 +73,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'main.context_processors.activity_log_processor', # 註冊context_processors
+                'main.context_processors.activity_log_processor',
             ],
         },
     },
@@ -117,14 +115,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+LANGUAGE_CODE = 'zh-Hant'
+TIME_ZONE = 'Asia/Taipei'
 USE_I18N = True
-
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/

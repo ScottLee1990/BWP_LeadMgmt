@@ -3,16 +3,15 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from datetime import timedelta
 from leads.models import PotentialCustomer
 from lead_enquiries.models import Enquiry
 from .models import DashboardGoal
-# 【修正】從 DecimalField 改為 FloatField，以匹配您的模型欄位類型
 from django.db.models import Sum, Count, Q, F, ExpressionWrapper, FloatField
 
 
+# 根據傳入的週期字串，計算開始與結束日期
 def get_date_range(period):
-    """根據傳入的週期字串，計算開始與結束日期"""
+
     today = timezone.now().date()
     if period == 'quarterly':
         current_quarter = (today.month - 1) // 3 + 1
@@ -26,7 +25,7 @@ def get_date_range(period):
         end_date = timezone.now()
     return start_date, end_date
 
-
+# 儀錶板
 @login_required
 def dashboard(request):
     period = request.GET.get('period', 'monthly')
@@ -37,7 +36,7 @@ def dashboard(request):
     customers_in_period = PotentialCustomer.objects.filter(created_at__range=(start_date, end_date))
     enquiries_in_period = Enquiry.objects.filter(created_at__range=(start_date, end_date))
 
-    # --- 客戶區塊數據計算 (維持不變) ---
+    # 客戶區塊統計表
     new_customers_count = customers_in_period.count()
     inquired_customers_count = PotentialCustomer.objects.filter(created_at__range=(start_date, end_date),
                                                                 enquiries__isnull=False).distinct().count()
@@ -45,10 +44,10 @@ def dashboard(request):
                                                                enquiries__status='success').distinct().count()
     pinned_customers = PotentialCustomer.objects.filter(is_pinned=True)
 
-    # --- 報價區塊數據計算 ---
+    # 報價區塊統計表
     new_enquiries_count = enquiries_in_period.count()
 
-    # 【修正】計算新增報價總額 (NTD)
+    # 計算新增報價總額
     new_enquiries_amount_agg = enquiries_in_period.aggregate(
         total_ntd=Sum(
             F('items__quantity') * F('items__unit_price') * F('items__exchange_rate'),
@@ -60,7 +59,7 @@ def dashboard(request):
     success_enquiries = enquiries_in_period.filter(status='success')
     success_enquiries_count = success_enquiries.count()
 
-    # 【修正】計算成交報價總額 (NTD)
+    # 計算成交報價總額
     success_enquiries_amount_agg = success_enquiries.aggregate(
         total_ntd=Sum(
             F('items__quantity') * F('items__unit_price') * F('items__exchange_rate'),
@@ -71,8 +70,7 @@ def dashboard(request):
 
     pinned_enquiries = Enquiry.objects.filter(is_pinned=True)
 
-    # --- 百分比計算 (維持不變) ---
-    # 【修改】這個百分比現在計算的是「新成交客戶數」的達成率
+    # 百分比計算
     try:
         success_customers_percentage = (success_customers_count / goal.new_customer_target) * 100 if goal.new_customer_target > 0 else 0
     except (TypeError, ZeroDivisionError):

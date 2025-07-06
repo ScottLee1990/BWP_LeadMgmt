@@ -23,7 +23,7 @@ from .models import PotentialCustomer, Contacts, ContactLogs
 
 # 所有使用的套件於上方匯入
 
-# -----輔助函式---------------------------------------------------------------------------
+# 輔助函式
 
 # 後續list和輸出的部分都會套運查詢、篩選邏輯，在這個輔助函式管理
 # 根據前端回傳的filter做QuerySet的篩選和排序
@@ -65,7 +65,7 @@ def _get_filtered_customers_queryset(request):
 
     return potential_customers.order_by(sort_by)
 
-# -----PotentialCustomer的CRUD---------------------------------------------------------------------------
+# PotentialCustomer的CRUD
 
 # 潛在客戶總表,讀取過濾後的QuerySet並用Paginator包裝後回傳
 @login_required
@@ -217,7 +217,7 @@ def toggle_pin(request, pk):
     return redirect('leads:potential_customer_detail', pk=pk)
 
 
-# -----Contacts的CRUD---------------------------------------------------------------------------
+# Contacts的CRUD
 
 # 大致上和PotentialCustomer的CRUD邏輯相同,唯獨包含create和update也都使用回傳Json給前端Modal的方式
 # 需有PotentialCustomer才能建立Contact
@@ -303,7 +303,7 @@ def contact_delete(request, pk):
         return JsonResponse({'html_form': html_form})
 
 
-# -----ContactLogs的CRUD---------------------------------------------------------------------------
+# ContactLogs的CRUD
 
 # 和Contacts的CRUD邏輯幾乎相同
 # 需有PotentialCustomer才能建立ContactLog

@@ -71,7 +71,6 @@
                 <th><a href="?{{ filter_query }}&sort=rank&order={% if sort_field == 'rank' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">評級<span class="sort-icon {% if sort_field == 'rank' %}active{% endif %}">{% if sort_field == 'rank' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
                 <th><a href="?{{ filter_query }}&sort=status&order={% if sort_field == 'status' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">狀態<span class="sort-icon {% if sort_field == 'status' %}active{% endif %}">{% if sort_field == 'status' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
                 <th>負責業務</th>
-                {# 【新增】最後聯絡時間的表頭與排序連結 #}
                 <th><a href="?{{ filter_query }}&sort=last_contacted_at&order={% if sort_field == 'last_contacted_at' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">最後聯絡<span class="sort-icon {% if sort_field == 'last_contacted_at' %}active{% endif %}">{% if sort_field == 'last_contacted_at' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
                 <th><a href="?{{ filter_query }}&sort=created_at&order={% if sort_field == 'created_at' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">建立時間<span class="sort-icon {% if sort_field == 'created_at' %}active{% endif %}">{% if sort_field == 'created_at' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
                 <th>操作</th>
@@ -86,7 +85,6 @@
                 <td>{{ potential_customer.get_rank_display }}</td>
                 <td>{{ potential_customer.get_status_display }}</td>
                 <td>{{ potential_customer.sales_incharge.username|default:"-" }}</td>
-                {# 【新增】顯示最後聯絡時間的資料格，如果沒有紀錄則顯示橫線 #}
                 <td>
                     {% if potential_customer.last_contacted_at %}
                         {{ potential_customer.last_contacted_at|date:"Y-m-d" }}
@@ -98,7 +96,6 @@
                 <td><button class="btn btn-outline-danger btn-sm open-modal" data-url="{% url 'leads:potential_customer_delete' pk=potential_customer.pk %}">刪除</button></td>
             </tr>
             {% empty %}
-            {# 【修改】更新 colspan 以符合新的欄位數量 #}
             <tr><td colspan="9" class="text-center">沒有找到符合條件的客戶。</td></tr>
             {% endfor %}
         </tbody>

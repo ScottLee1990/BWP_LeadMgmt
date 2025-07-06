@@ -59,7 +59,6 @@
                 <th><a href="?{{ filter_query }}&sort=bwp_no&order={% if sort_field == 'bwp_no' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">博威單號<span class="sort-icon {% if sort_field == 'bwp_no' %}active{% endif %}">{% if sort_field == 'bwp_no' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
                 <th><a href="?{{ filter_query }}&sort=potential_customer__company_name&order={% if sort_field == 'potential_customer__company_name' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">客戶名稱<span class="sort-icon {% if sort_field == 'potential_customer__company_name' %}active{% endif %}">{% if sort_field == 'potential_customer__company_name' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
                 <th><a href="?{{ filter_query }}&sort=status&order={% if sort_field == 'status' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">狀態<span class="sort-icon {% if sort_field == 'status' %}active{% endif %}">{% if sort_field == 'status' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
-                {# 【修改】總金額欄位標題與排序參數 #}
                 <th><a href="?{{ filter_query }}&sort=annotated_total_amount_ntd&order={% if sort_field == 'total_amount_ntd' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">總金額 (NT)<span class="sort-icon {% if sort_field == 'total_amount_ntd' %}active{% endif %}">{% if sort_field == 'total_amount_ntd' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
                 <th>建立者</th>
                 <th><a href="?{{ filter_query }}&sort=created_at&order={% if sort_field == 'created_at' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">建立時間<span class="sort-icon {% if sort_field == 'created_at' %}active{% endif %}">{% if sort_field == 'created_at' %}{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</span></a></th>
@@ -72,7 +71,6 @@
                 <td><a href="{% url 'lead_enquiries:enquiry_detail' pk=enquiry.pk %}">{{ enquiry.bwp_no }}</a></td>
                 <td><a href="{% url 'leads:potential_customer_detail' pk=enquiry.potential_customer.pk %}">{{ enquiry.potential_customer.company_name }}</a></td>
                 <td><span class="badge bg-secondary">{{ enquiry.get_status_display }}</span></td>
-                {# 【修改】顯示由 view annotate 傳來的 NTD 總金額 #}
                 <td>{{ enquiry.annotated_total_amount_ntd|default:"0.0"|floatformat:2 }}</td>
                 <td>{{ enquiry.created_by.username|default:"-" }}</td>
                 <td>{{ enquiry.created_at|date:"Y-m-d" }}</td>
