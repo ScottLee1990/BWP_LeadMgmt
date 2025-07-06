@@ -146,12 +146,14 @@ def potential_customer_create(request):
 @login_required
 def potential_customer_update(request, pk):
     potential_customer = get_object_or_404(PotentialCustomer, pk=pk)
-    # 前端submit表單
+
+    if potential_customer.sales_incharge != request.user:
+        return HttpResponseForbidden("您沒有權限編輯此客戶。")
+
     if request.method == 'POST':
         form = PotentialCustomerForm(request.POST, instance=potential_customer)
         if form.is_valid():
             updated_customer = form.save()
-
             # 寫入操作紀錄
             LogEntry.objects.log_action(
                 user_id=request.user.id,
@@ -172,6 +174,9 @@ def potential_customer_update(request, pk):
 @login_required
 def potential_customer_delete(request, pk):
     potential_customer = get_object_or_404(PotentialCustomer, pk=pk)
+
+    if potential_customer.sales_incharge != request.user:
+        return HttpResponseForbidden("您沒有權限刪除此客戶。")
     # 前端點擊確認
     if request.method == 'POST':
         customer_repr = str(potential_customer)  # 在刪除前先取得物件的文字表示
@@ -255,6 +260,10 @@ def contact_create(request, pk):
 @login_required
 def contact_update(request, pk):
     contact = get_object_or_404(Contacts, pk=pk)
+
+    if contact.potential_customer.sales_incharge != request.user:
+        return HttpResponseForbidden("您沒有權限編輯此客戶的聯絡人。")
+
     if request.method == 'POST':
         form = ContactsForm(request.POST, instance=contact)
         if form.is_valid():
@@ -284,6 +293,9 @@ def contact_update(request, pk):
 @login_required
 def contact_delete(request, pk):
     contact = get_object_or_404(Contacts, pk=pk)
+    if contact.potential_customer.sales_incharge != request.user:
+        return HttpResponseForbidden("您沒有權限刪除此客戶的聯絡人。")
+
     if request.method == 'POST':
         contact_repr = f"{str(contact)} (屬於 {str(contact.potential_customer)})"  # 在刪除前先取得物件的文字表示
         contact.delete()
@@ -334,6 +346,9 @@ def contact_log_create(request, pk):
 @login_required
 def contact_log_update(request, pk):
     log = get_object_or_404(ContactLogs, pk=pk)
+    if log.created_by != request.user:
+        return HttpResponseForbidden("你不是這筆開發紀錄的建立者")
+
     potential_customer = log.potential_customer
     if request.method == 'POST':
         form = ContactLogsForm(request.POST, instance=log, potential_customer=potential_customer)
@@ -355,7 +370,6 @@ def contact_log_update(request, pk):
 @login_required
 def contact_log_delete(request, pk):
     log = get_object_or_404(ContactLogs, pk=pk)
-    # 多一個操作者的驗證機制
     if log.created_by != request.user:
         return HttpResponseForbidden("你不是這筆開發紀錄的建立者")
     if request.method == 'POST':

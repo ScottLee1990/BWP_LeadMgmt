@@ -152,6 +152,10 @@ def enquiry_create(request):
 @login_required
 def enquiry_update(request, pk):
     enquiry = get_object_or_404(Enquiry, pk=pk)
+
+    if enquiry.created_by != request.user:
+        return HttpResponseForbidden("您沒有權限編輯此報價單。")
+
     if request.method == 'POST':
         form = EnquiryForm(request.POST, instance=enquiry)
         if form.is_valid():
@@ -169,6 +173,10 @@ def enquiry_update(request, pk):
 @login_required
 def enquiry_delete(request, pk):
     enquiry = get_object_or_404(Enquiry, pk=pk)
+
+    if enquiry.created_by != request.user:
+        return HttpResponseForbidden("您沒有權限刪除此報價單。")
+
     if request.method == 'POST':
         enquiry_repr = str(enquiry)
         enquiry.delete()
@@ -222,6 +230,10 @@ def enquiry_item_create(request, enquiry_pk):
 @login_required
 def enquiry_item_update(request, pk):
     item = get_object_or_404(EnquiryItem, pk=pk)
+
+    if item.enquiry.created_by != request.user:
+        return HttpResponseForbidden("您沒有權限編輯此報價單的品項。")
+
     if request.method == 'POST':
         form = EnquiryItemForm(request.POST, instance=item)
         if form.is_valid():
@@ -348,6 +360,7 @@ def export_enquiries_csv(request):
 @login_required
 def enquiry_attachment_upload(request, enquiry_pk):
     enquiry = get_object_or_404(Enquiry, pk=enquiry_pk)
+
     if request.method == 'POST':
         # 記得要傳入 request.FILES 來處理檔案
         form = EnquiryAttachmentForm(request.POST, request.FILES)
@@ -368,6 +381,10 @@ def enquiry_attachment_upload(request, enquiry_pk):
 @login_required
 def enquiry_attachment_delete(request, pk):
     attachment = get_object_or_404(EnquiryAttachment, pk=pk)
+
+    if attachment.uploaded_by != request.user:
+        return HttpResponseForbidden("您沒有權限刪除此附件。")
+
     if request.method == 'POST':
         # 刪除檔案本身
         attachment.file.delete(save=False)
